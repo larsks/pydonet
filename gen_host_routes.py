@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
+'''Generate routing information for use with sbbsecho + BinkD.'''
+
 import os, sys, optparse
 import nodelist
-
 
 def parse_args():
   parser = optparse.OptionParser()
@@ -21,13 +22,13 @@ def main ():
   for node in nl.node():
     if opts.zone and node['zone'] != opts.zone: continue
     nets['%(zone)s:%(net)s' % node] = True
-    if node.get('IBN'):
+    if node.flags.get('IBN'):
       print 'DIRECT %s' % node
 
   for net in nets.keys():
     try:
       host = nl.node('%s/0' % net)[0]
-      if host.get('IBN'):
+      if host.flags.get('IBN'):
         print 'ROUTE_TO %s/0 %s/ALL' % (net, net)
     except KeyError:
       pass

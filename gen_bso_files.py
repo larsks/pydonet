@@ -45,8 +45,9 @@ def main():
           }
 
   for d, data in dest.items():
-    print 'DEST:', data['node'], '[', data['fbase'], ']'
-    fd = open(os.path.join(opts.dir, '%s.%slo' % (data['fbase'], opts.mode)), 'w')
+    flofile = '%s.%slo' % (data['fbase'], opts.mode)
+    print 'DEST:', data['node'], '[', flofile, ']'
+    fd = open(os.path.join(opts.dir, flofile), 'w')
     for p,f in data['packets']:
       print '  ->', f
       print >>fd, os.path.join(opts.dir, f)

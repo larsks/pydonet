@@ -39,15 +39,18 @@ class Node (dict):
   def __str__ (self):
     return self.address()
 
+Default = Node({
+    'zone': '0',
+    'net': '0',
+    'node': '0',
+  })
+
 def subst_spaces(s):
   return s.replace('_', ' ')
 
 class Nodelist (object):
 
   def __init__ (self, src):
-    self.cur_zone = 0
-    self.cur_net = 0
-
     # Raw list of nodes.
     self.nodelist = []
 
@@ -64,6 +67,9 @@ class Nodelist (object):
       self.parse(open(src))
 
   def parse(self, src):
+    cur_zone = 0
+    cur_net = 0
+    cur_route = Default
 
     lineno = 0
     for line in src:
@@ -90,7 +96,7 @@ class Nodelist (object):
           node[fieldName] = transform(node[fieldName])
 
       # Now extract the flags into the dictionary.
-      node.flags = {}
+      node.flags = {'private' : False}
       for flag in parts[7:]:
         data = True
         if ':' in flag:
@@ -99,23 +105,31 @@ class Nodelist (object):
         node.flags[flag] = data
 
       if node['keyword'] == 'zone':
-        self.cur_zone = node['node']
-        self.cur_net = 1
+        cur_zone = node['node']
+        cur_route = Default
+        cur_net = 1
       elif node['keyword'] == 'region':
-        self.cur_net = node['node']
+        cur_net = node['node']
+        cur_route = Default
         node['node'] = 0
       elif node['keyword'] == 'host':
-        self.cur_net = node['node']
+        cur_net = node['node']
+        cur_route = node
         node['node'] = 0
+      elif node['keyword'] == 'hub':
+        cur_route = node
+      elif node['keyword'] == 'pvt':
+        node.flags['private'] = True
 
-      node['zone'] = self.cur_zone
-      node['net'] = self.cur_net
+      node['zone'] = cur_zone
+      node['net'] = cur_net
+      node['route'] = cur_route
 
       # Add to sequential list of nodes.
       self.nodelist.append(node)
 
       # Add to node index.
-      self.nodes['%(zone)s:%(net)s/%(node)s' % node] = [node]
+      self.nodes['%(zone)s:%(net)s/%(node)s' % node] = node
 
   def node(self, k=None):
     '''If k is None, return all nodes.  Otherwise, return information
@@ -137,5 +151,7 @@ if __name__ == '__main__':
           % (node.address(), node['name'], ' '.join(node.flags.keys()))
   else:
     import pprint
-    pprint.pprint(nl.node(sys.argv[2]))
+    x = nl.node(sys.argv[2])
+    print 'Route mail for %s to %s.' % (x.address(), x['route'].address())
+
 

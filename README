@@ -1,0 +1,8 @@
+Pydonet
+=======
+
+Author: Lars Kellogg-Stedman (1:322/761)
+        lars@oddbit.com
+
+You probably want to look at lib/pydonet/ and scripts/pktscan.
+

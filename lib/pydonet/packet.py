@@ -89,7 +89,7 @@ HdrFSC0048 = Struct('FSC-0048',
 def PacketReader (hdr):
   return Struct('packet',
       Rename('header', hdr),
-      Rename('messages', GreedyRepeater(message.MessageReader)),
+      Rename('messages', GreedyRepeater(message.MessageReader(message.PackedMessageHeader))),
       Const(ULInt16('nullTerminator'), 0)
   )
     

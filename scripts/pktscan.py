@@ -9,6 +9,7 @@ for x in sys.argv[1:]:
   print p
 
   for m in p.messages:
+    print m
     m = message.Message(m)
     print ' ', m
     pprint.pprint( m.kludge )

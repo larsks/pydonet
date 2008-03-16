@@ -6,3 +6,7 @@ Author: Lars Kellogg-Stedman (1:322/761)
 
 You probably want to look at lib/pydonet/ and scripts/pktscan.
 
+Run it like this:
+
+env PYTHONPATH=lib python ./scripts/pktscan foo.pkt
+

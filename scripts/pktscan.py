@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, sys
+import os, sys, pprint
 from pydonet import packet
 from pydonet import message
 
@@ -11,6 +11,5 @@ for x in sys.argv[1:]:
   for m in p.messages:
     m = message.Message(m)
     print ' ', m
-    print m.kludge
-    print m.body
+    pprint.pprint( m.kludge )
 

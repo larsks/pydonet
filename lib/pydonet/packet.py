@@ -104,7 +104,8 @@ class Packet (object):
     return getattr(self.raw, k)
 
   def __str__ (self):
-    return '%s -> %s' % (self.origAddr, self.destAddr)
+    return '%s -> %s (%d messages)' \
+        % (self.origAddr, self.destAddr, len(self.raw.messages))
 
 def PacketFactory (src):
 

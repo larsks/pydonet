@@ -38,17 +38,20 @@ class Message (object):
       'To: %(toUsername)s (%(destNet)d/%(destNode)d), ' \
       'Re: %(subject)s' % self.raw
 
+  def addKludge(self, line):
+    k,v = line.strip().split(': ')
+    if self.kludge.has_key(k):
+      self.kludge[k].append(v)
+    else:
+      self.kludge[k] = [v]
+
   def parseKludgeLines(self):
     tmp = StringIO(self.raw.body.replace('\r', '\n'))
     body = []
     s = 0
     for line in tmp:
       if line.startswith('\x01'):
-        k,v = line[1:].strip().split(': ')
-        if self.kludge.has_key(k):
-          self.kludge[k].append(v)
-        else:
-          self.kludge[k] = [v]
+        self.addKludge(line[1:])
       elif s == 0:
         if line.startswith('AREA:'):
           self.kludge['AREA'] = [line.strip().split(':')[1]]
@@ -60,10 +63,7 @@ class Message (object):
         else:
           body.append(line)
       elif s == 2:
-        k,v = line.strip().split(': ')
-        if self.kludge.has_key(k):
-          self.kludge[k].append(v)
-        else:
-          self.kludge[k] = [v]
+        self.addKludge(line)
 
     self.body = ''.join(body)
+

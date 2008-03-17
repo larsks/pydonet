@@ -60,7 +60,7 @@ class Message (object):
         ' '.join(['     From:', self.header.fromUsername]),
         ' '.join(['       To:', self.header.toUsername]),
         ' '.join(['  Subject:', self.header.subject]),
-        ' '.join(['    Flags:', ' '.join([x[0] for x in self.header.attr if x[1]])]),
+        ' '.join(['    Flags:', ' '.join([x[0] for x in self.header.flags if x[1]])]),
     ])
 
 def main():
@@ -71,7 +71,7 @@ def main():
     print '     From:', M.header.fromUsername
     print '       To:', M.header.toUsername
     print '  Subject:', M.header.subject
-    print '    Flags:', ' '.join([x[0] for x in M.header.attr if x[1]])
+    print '    Flags:', ' '.join([x[0] for x in M.header.flags if x[1]])
     print
 
 if __name__ == '__main__': main()

@@ -49,7 +49,11 @@ def runfilter(filter, packet, msg):
 
   try:
     fd = open(filter)
-    exec fd in { 'M': msg, 'P': packet, 'discard': discard }
+    exec fd in { 'M': msg, 'P': packet,
+        'discard': discard,
+        'copy': copy,
+        'keep': keep,
+        'stop': stop}
   except StopMessageProcessing:
     pass
 

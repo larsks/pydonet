@@ -75,6 +75,9 @@ class Body (object):
 
     self.lines = body
 
+  def __str__ (self):
+    return '\n'.join(self.lines)
+
   def serialize(self):
     '''Rebuilds the message as:
 
@@ -84,7 +87,22 @@ class Body (object):
       Origin
       SEEN-BY'''
 
-    pass
+    lines = []
+
+    if self.area:
+      lines.append('AREA:%s' % self.area)
+
+    for k,v in self.klines:
+      lines.append('\x01%s %s' % (k,v))
+
+    lines.extend(self.lines)
+
+    if self.origin:
+      lines.append(self.origin)
+
+    lines.extend(self.seenby)
+
+    return fts0001.MessageBody.build('\r'.join(lines))
 
 class Message (object):
 
@@ -98,12 +116,7 @@ class Message (object):
 
     self.fd = fd
     self.message_class, self.header = MessageFactory(fd)
-    self.body =  fts0001.MessageBody.parse_stream(fd)
-
-    self.parseBody()
-
-  def parseBody(self):
-    pass
+    self.body =  Body(fts0001.MessageBody.parse_stream(fd))
 
   def getOrigAddr(self):
     return Address(n = self.header.origNet, f = self.header.origNode)
@@ -134,7 +147,7 @@ class Message (object):
 
   def serialize(self):
     return self.message_class.build(self.header) \
-        + fts0001.MessageBody.build(self.body)
+        + self.body.serialize()
 
   def __getattr__(self, name):
     return getattr(self.header, name)

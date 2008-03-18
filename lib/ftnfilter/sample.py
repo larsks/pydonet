@@ -11,7 +11,7 @@ if M.subject.lower() == 'fidonet via the internet':
   discard()
 
 if M.fromUsername == 'Nick Andre' \
-    and M.area == 'DBRIDGE' \
+    and M.body.area == 'DBRIDGE' \
     and 'release' in M.subject.lower():
   print 'DBRIDGE RELEASE: %s re: %s' % (M.fromUsername, M.subject)
   copy('DBRELEAS')
@@ -19,6 +19,6 @@ if M.fromUsername == 'Nick Andre' \
 for t in TWITS:
   if M.fromUsername == t:
     print 'TWIT: %s re: %s' % (M.fromUsername, M.subject)
-    M.area = 'TWIT'
+    M.body.area = 'TWIT'
 
 

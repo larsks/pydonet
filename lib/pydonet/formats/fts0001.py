@@ -78,7 +78,5 @@ DiskMessageHeader = Struct('message',
   ULInt16('nextReply'),
 )
 
-MessageBody = Struct('body',
-    CString('body')
-)
+MessageBody = CString('body')
 

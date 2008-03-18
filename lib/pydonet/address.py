@@ -14,6 +14,11 @@ class Address (object):
       self.n = mo.group('n')
       self.f = mo.group('f')
       self.p = mo.group('p')
+    else:
+      self.z = z
+      self.n = n
+      self.f = f
+      self.p = p
 
   def __str__ (self):
     addr = []

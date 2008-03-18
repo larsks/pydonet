@@ -12,13 +12,20 @@ packetChecks = (
     )
 
 def PacketFactory(src):
+  '''Check `src` against the packetChecks table to see what type of packet it is.
+  This could probably done more gracefully; right now `src` must be seekable, because
+  for each check we read a packet header, perform a check, and then re-read the header.
+  Yuck.
+
+  RETURNS: (construct class, parsed data)'''
+
   pos = src.tell()
   for check in packetChecks:
     src.seek(pos)
     m = check[0].parse_stream(src)
     src.seek(pos)
     if check[2](m):
-      return check[1].parse_stream(src)
+      return (check[1], check[1].parse_stream(src))
 
   raise ValueError('Unable to recognize this packet.')
 
@@ -33,7 +40,7 @@ class Packet (object):
       fd = StringIO(data)
 
     self.fd = fd
-    self.header = PacketFactory(fd)
+    self.packet_class, self.header = PacketFactory(fd)
 
   def next(self):
     try:
@@ -45,9 +52,13 @@ class Packet (object):
   def __iter__ (self):
     return self
 
+  def serialize(self):
+    return self.packet_class.build(self.header)
+
 def main():
   import sys
   for p in sys.argv[1:]:
+    print p
     P = Packet(file = p)
     print P.header
     c = 0

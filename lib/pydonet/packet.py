@@ -55,6 +55,9 @@ class Packet (object):
   def serialize(self):
     return self.packet_class.build(self.header)
 
+  def __getattr__ (self, name):
+    return getattr(self.header, name)
+
 def main():
   import sys
   for p in sys.argv[1:]:

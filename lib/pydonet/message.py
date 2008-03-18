@@ -5,6 +5,10 @@ from pydonet.formats import *
 from pydonet.address import Address
 from StringIO import StringIO
 
+S_START   = 0
+S_BODY    = 1
+S_SEENBY  = 2
+
 def MessageFactory(src):
   pos = src.tell()
   for fmt in [ fts0001.PackedMessageHeader, fts0001.DiskMessageHeader ]:
@@ -17,6 +21,70 @@ def MessageFactory(src):
     return (fmt, m)
 
   raise ValueError('Not a FTS-0001 message.')
+
+class Body (object):
+  def __init__ (self, data):
+    self.area = None
+    self.origin = None
+    self.klines = []
+    self.seenby = []
+    self.raw = data
+    self.lines = self.raw.split('\r')
+
+    self.parseLines()
+
+  def addKludge(self, line):
+    k,v = line.split(None, 1)
+    self.klines.append([k[1:],v])
+
+  def parseLines(self):
+
+    state = S_START
+    body = []
+
+    i=0
+    while i < len(self.lines):
+      line = self.lines[i]
+
+      if state == S_START:
+        state = S_BODY
+
+        if line.startswith('AREA:'):
+          self.area = line.split(':')[1]
+        else:
+          continue
+      elif state == S_BODY:
+        if line.startswith('\x01'):
+          self.addKludge(line)
+        elif line.startswith(' * Origin:'):
+          self.origin = line
+          state = S_SEENBY
+        else:
+          body.append(line)
+      elif state == S_SEENBY:
+        if line.startswith('\x01'):
+          self.addKludge(line)
+        elif line.startswith('SEEN-BY:'):
+          self.seenby.append(line)
+        elif len(line) == 0:
+          pass
+        else:
+          raise ValueError('Unexpected: %s'  % line)
+
+      i += 1
+
+    self.lines = body
+
+  def serialize(self):
+    '''Rebuilds the message as:
+
+      AREA:...
+      Kludge lines
+      Body
+      Origin
+      SEEN-BY'''
+
+    pass
 
 class Message (object):
 
@@ -31,6 +99,11 @@ class Message (object):
     self.fd = fd
     self.message_class, self.header = MessageFactory(fd)
     self.body =  fts0001.MessageBody.parse_stream(fd)
+
+    self.parseBody()
+
+  def parseBody(self):
+    pass
 
   def getOrigAddr(self):
     return Address(n = self.header.origNet, f = self.header.origNode)
@@ -62,6 +135,9 @@ class Message (object):
   def serialize(self):
     return self.message_class.build(self.header) \
         + fts0001.MessageBody.build(self.body)
+
+  def __getattr__(self, name):
+    return getattr(self.header, name)
 
 def main(verbose = False):
   import sys

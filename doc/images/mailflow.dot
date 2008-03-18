@@ -1,0 +1,11 @@
+digraph mailflow {
+	fidonet;
+	binkd;
+	ftnfilter;
+	dbridge;
+
+	fidonet -> binkd;
+	binkd -> ftnfilter;
+	ftnfilter -> dbridge;
+}
+

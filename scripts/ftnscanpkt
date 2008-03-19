@@ -1,0 +1,39 @@
+#!/usr/bin/python
+
+import os, sys, optparse, zipfile
+from pydonet.packet import Packet
+
+def parse_args():
+	parser = optparse.OptionParser()
+	parser.add_option('-z', '--zip', action='store_true')
+
+	return parser.parse_args()
+
+def scanPacket(pkt):
+	print 'Header:'
+	print repr(pkt.header)
+
+	print 'Messages:'
+	count = 0
+	for msg in pkt:
+		print '[%d]' % count, msg
+		count += 1
+
+	print 'Found %d messages.' % count
+
+def main():
+	opts, args = parse_args()
+
+	for arg in args:
+		print 'FILE:', arg
+		if opts.zip:
+			zf = zipfile.ZipFile(arg)
+			for name in zf.namelist():
+				pkt = Packet(data = zf.read(name))
+				scanPacket(pkt)
+		else:
+			pkt = Packet(file = arg)
+			scanPacket(pkt)
+
+if __name__ == '__main__': main()
+

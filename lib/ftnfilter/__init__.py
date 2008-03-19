@@ -63,8 +63,8 @@ def runfilter(filter, packet, msg):
     '''Change message area for message.'''
 
     print '  - MOVE (to %s):' % area, show()
-    msg.body.klines.append(('X-ORIGINAL-AREA:', msg.area))
-    msg.area = area
+    msg.body.klines.append(('X-ORIGINAL-AREA:', msg.body.area))
+    msg.body.area = area
 
   try:
     fd = open(filter)

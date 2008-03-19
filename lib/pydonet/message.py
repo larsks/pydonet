@@ -137,13 +137,18 @@ class Message (object):
   destAddr = property(getDestAddr, setDestAddr, None, 'Get/set destination address.')
 
   def __str__ (self):
-    return '\n'.join([
-        ' '.join([ str(self.origAddr), '->', str(self.destAddr), self.header.dateTime]),
-        ' '.join(['     From:', self.header.fromUsername]),
-        ' '.join(['       To:', self.header.toUsername]),
-        ' '.join(['  Subject:', self.header.subject]),
-        ' '.join(['    Flags:', ' '.join([x[0] for x in self.header.flags if x[1]])]),
-    ])
+    if self.body.area:
+      area = ' [%s]' % self.body.area
+
+    text = [
+      '%s -> %s @ %s%s' % (self.origAddr, self.destAddr, self.dateTime, area),
+      '     From: %s' % self.fromUsername,
+      '       To: %s' % self.toUsername,
+      '  Subject: %s' % self.subject,
+      '    Flags: %s' % (' '.join([x[0] for x in self.flags if x[1]])),
+    ]
+
+    return '\n'.join(text)
 
   def serialize(self):
     return self.message_class.build(self.header) \

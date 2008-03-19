@@ -21,7 +21,8 @@ setup(name = "pydonet",
   scripts = [
     'scripts/ftnfilter',
     'scripts/ftnscanpkt',
-    'scripts/ftnscanmsg'
+    'scripts/ftnscanmsg',
+    'scripts/ftnunpack',
   ]
 )
 

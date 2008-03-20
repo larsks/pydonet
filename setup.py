@@ -11,6 +11,7 @@ setup(name = "pydonet",
   packages = [
     'pydonet',
     'pydonet.formats',
+    'pydonet.utils',
     'ftnfilter',
     'construct',
     'construct.lib',

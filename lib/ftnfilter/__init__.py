@@ -60,10 +60,11 @@ def runfilter(filter, packet, msg):
     state['messages'].append(x)
 
   def move(area):
-    '''Change message area for message.'''
+    '''Change message area for message.  Needs to change MSGID to
+    avoid dupe filters.'''
 
     print '  - MOVE (to %s):' % area, show()
-    msg.body.klines.append(('X-ORIGINAL-AREA:', msg.body.area))
+    msg.body.klines['X-ORIGINAL-AREA:'] = msg.body.area
     msg.body.area = area
 
   try:

@@ -3,6 +3,7 @@
 import construct.core
 from pydonet.formats import *
 from pydonet.address import Address
+from pydonet.utils.odict import OrderedDict
 from StringIO import StringIO
 
 S_START   = 0
@@ -26,7 +27,7 @@ class Body (object):
   def __init__ (self, data):
     self.area = None
     self.origin = None
-    self.klines = []
+    self.klines = OrderedDict()
     self.seenby = []
     self.raw = data
     self.lines = self.raw.split('\r')
@@ -35,7 +36,12 @@ class Body (object):
 
   def addKludge(self, line):
     k,v = line.split(None, 1)
-    self.klines.append([k[1:],v])
+    k = k[1:]
+
+    if self.klines.has_key(k):
+      self.klines[k].append(v)
+    else:
+      self.klines[k] = [v]
 
   def parseLines(self):
 
@@ -92,8 +98,9 @@ class Body (object):
     if self.area:
       lines.append('AREA:%s' % self.area)
 
-    for k,v in self.klines:
-      lines.append('\x01%s %s' % (k,v))
+    for k,vv in self.klines.items():
+      for v in vv:
+        lines.append('\x01%s %s' % (k,v))
 
     lines.extend(self.lines)
 
@@ -155,7 +162,10 @@ class Message (object):
         + self.body.serialize()
 
   def __getattr__(self, name):
-    return getattr(self.header, name)
+    try:
+      return getattr(self.header, name)
+    except AttributeError:
+      return getattr(self.body, name)
 
 def main(verbose = False):
   import sys

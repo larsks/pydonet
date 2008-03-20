@@ -147,15 +147,10 @@ class Message (object):
     if self.body.area:
       area = ' [%s]' % self.body.area
 
-    text = [
-      '%s -> %s @ %s%s' % (self.origAddr, self.destAddr, self.dateTime, area),
-      '     From: %s' % self.fromUsername,
-      '       To: %s' % self.toUsername,
-      '  Subject: %s' % self.subject,
-      '    Flags: %s' % (' '.join([x[0] for x in self.flags if x[1]])),
-    ]
-
-    return '\n'.join(text)
+    return '%s (%s) -> %s (%s) @ %s%s Re: %s' \
+        % (self.fromUsername, self.origAddr, 
+            self.toUsername, self.destAddr,
+            self.dateTime, area, self.subject)
 
   def serialize(self):
     return self.message_class.build(self.header) \
@@ -171,11 +166,15 @@ def main(verbose = False):
   import sys
   for m in sys.argv[1:]:
     M = Message(file = m)
+
     print M.origAddr, '->', M.destAddr, M.header.dateTime
     print '     From:', M.header.fromUsername
     print '       To:', M.header.toUsername
     print '  Subject:', M.header.subject
     print '    Flags:', ' '.join([x[0] for x in M.header.flags if x[1]])
+    for k,vv in M.klines.items():
+      for v in vv:
+        print '%10s %s' % (k,v)
     print
     if (verbose):
       print M.header

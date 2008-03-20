@@ -55,7 +55,7 @@ body data::
   # because some kludges (INTL) don't use colons.  Durrr.  Also, 
   # since some kludges are multi-valued, you'll always get back a
   # list. 
-  print 'MSGID', msg.body.klines['MSGID:'][0]
+  print 'MSGID', msg.klines['MSGID:'][0]
 
 FTNFilter
 =========

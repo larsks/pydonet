@@ -1,10 +1,24 @@
 import re
 
-re_address = re.compile('((?P<z>\d+):)?(?P<n>\d+)/(?P<f>\d+)(\.(?P<p>\d+))?')
+re_address = re.compile('((?P<z>\d+):)?(?P<n>\d+)/(?P<f>\d+)(\.(?P<p>\d+))?(@(?P<d>\S+))?')
 
 class Address (object):
+  '''A class for manipulating Fidonet addresses.  Examples::
+    
+    >>> from pydonet.address import Address
+    >>> a = Address('1:322/761')
+    >>> print a
+    1:322/761
+    >>> print a.z
+    1
+    >> print a.n
+    322
+    >> print a.f
+    761
+    
+    '''
 
-  def __init__ (self, addr = None, z = None, n = None, f = None, p = None):
+  def __init__ (self, addr = None, z = None, n = None, f = None, p = None, d = None):
     if addr is not None:
       mo = re_address.match(addr)
       if not mo:
@@ -14,11 +28,13 @@ class Address (object):
       self.n = mo.group('n')
       self.f = mo.group('f')
       self.p = mo.group('p')
+      self.d = mo.group('d')
     else:
       self.z = z
       self.n = n
       self.f = f
       self.p = p
+      self.d = d
 
   def __str__ (self):
     addr = []
@@ -29,6 +45,8 @@ class Address (object):
 
     if self.p is not None:
       addr.append('.%s' % self.p)
+    if self.d is not None:
+      addr.append('@%s' % self.d)
 
     return ''.join(addr)
 

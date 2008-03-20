@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+'''This module implements classes for parsing FTN format messages.'''
+
 import construct.core
 from pydonet.formats import *
 from pydonet.address import Address

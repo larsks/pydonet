@@ -1,4 +1,6 @@
 class OrderedDict (dict):
+  '''OrderDict implements a dictionary that maintains the order in which 
+  keys were added.'''
 
   def __init__ (self, *args, **kwargs):
     self.order = []

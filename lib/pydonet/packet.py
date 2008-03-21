@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import construct
 from pydonet.message import Message
 from pydonet.formats import *
 from StringIO import StringIO

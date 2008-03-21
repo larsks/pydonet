@@ -2,7 +2,7 @@
 
 '''This module implements classes for parsing FTN format messages.'''
 
-import construct.core
+from pydonet import construct
 from pydonet.formats import *
 from pydonet.address import Address
 from pydonet.utils.odict import OrderedDict
@@ -146,6 +146,7 @@ class Message (object):
   destAddr = property(getDestAddr, setDestAddr, None, 'Get/set destination address.')
 
   def __str__ (self):
+    area = ''
     if self.body.area:
       area = ' [%s]' % self.body.area
 

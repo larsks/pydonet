@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from construct import *
+from pydonet.construct import *
 
 # http://www.ftsc.org/docs/fts-0001.016
 PacketHeader = Struct('header',

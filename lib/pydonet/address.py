@@ -20,15 +20,16 @@ class Address (object):
 
   def __init__ (self, addr = None, z = None, n = None, f = None, p = None, d = None):
     if addr is not None:
-      mo = re_address.match(addr)
-      if not mo:
-        raise ValueError('\"%s\" is not a FTN address.' % addr)
+      if isinstance(addr, Address):
+        for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
+          setattr(self, attr, getattr(addr, attr))
+      else:
+        mo = re_address.match(addr)
+        if not mo:
+          raise ValueError('\"%s\" is not a FTN address.' % addr)
 
-      self.z = mo.group('z')
-      self.n = mo.group('n')
-      self.f = mo.group('f')
-      self.p = mo.group('p')
-      self.d = mo.group('d')
+        for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
+          setattr(self, attr, mo.group(attr))
     else:
       self.z = z
       self.n = n

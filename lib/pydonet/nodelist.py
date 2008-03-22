@@ -15,143 +15,129 @@ For example:
 '''
 
 import os, sys, re, fileinput
+from pydonet.address import Address
 
 # These are the seven standard fields, described in
 # FTS 5000.002 (http://www.ftsc.org/docs/fts-5000.002).
+# This is a list of (x,y) tuples, where x is the field
+# name and y is a transformation to apply to it.
 REQUIRED_FIELDS = (
     ('keyword',   lambda x: x.lower()),
     ('node',      None),
-    ('name',      None),
-    ('location',  None),
-    ('sysop',     None),
+    ('name',      lambda x: x.replace('_', ' ')),
+    ('location',  lambda x: x.replace('_', ' ')),
+    ('sysop',     lambda x: x.replace('_', ' ')),
     ('phone',     None),
     ('speed',     None),
     )
 
-class Node (dict):
+DEFAULT = Address('0:0/0')
 
-  def __init__(self, *args, **kwargs):
-    super(Node, self).__init__(*args)
-    self.parent = kwargs.get('parent')
+class AttrDict (dict):
+  def __getattr__ (self, k):
+    try:
+      return self[k]
+    except KeyError, detail:
+      raise AttributeError(detail)
 
-  def address (self):
-    return '%(zone)s:%(net)s/%(node)s' % self
-  def __str__ (self):
-    return self.address()
+  def __setattr__ (self, k, v):
+    self[k] = v
 
-Default = Node({
-    'zone': '0',
-    'net': '0',
-    'node': '0',
-  })
+class ShortLineError(Exception):
+  pass
 
-def subst_spaces(s):
-  return s.replace('_', ' ')
+class Node (AttrDict):
+  def __init__ (self, entry, ctx):
+    self.entry = entry
+    self.parseEntry(entry, ctx)
+
+  def parseEntry(self, entry, ctx):
+    fields = entry.strip().split(',')
+
+    if len(fields) < len(REQUIRED_FIELDS):
+      raise ShortLineError
+
+    for x in REQUIRED_FIELDS:
+      self[x[0]] = x[1] is None and fields.pop(0) or x[1](fields.pop(0))
+
+    for x in fields:
+      try:
+        k,v = x.split(':', 1)
+      except ValueError:
+        k = x
+        v = True
+
+      self[k] = v
+
+    if self.keyword == 'zone':
+      self.address = Address('%s:1/1' % self.node)
+      ctx.route = self.address
+      self.route = DEFAULT
+    elif self.keyword == 'region':
+      self.address = Address('%s:%s/1' % (ctx.address.z, self.node))
+      ctx.route = self.address
+      self.route = DEFAULT
+    elif self.keyword == 'host':
+      self.address = Address('%s:%s/1' % (ctx.address.z, self.node))
+      ctx.route = self.address
+      self.route = DEFAULT
+    elif self.keyword == 'hub':
+      self.address = Address('%s:%s/%s'
+          % (ctx.address.z, ctx.address.n, self.node))
+      ctx.route = self.address
+      self.route = DEFAULT
+    else:
+      self.address = Address(addr = ctx.address)
+      self.address.f = self.node
+      self.route = ctx.route
+
+    ctx.address = Address(addr = self.address)
 
 class Nodelist (object):
+  def __init__ (self, nlpath = None):
+    self.nodes = []
+    self.index = {
+        'zone': {},
+        'net':  {},
+        'node': {},
+    }
 
-  def __init__ (self, src):
-    # Raw list of nodes.
-    self.nodelist = []
+    if nlpath is not None:
+      self.parseFile(nlpath)
 
-    # Indexes.
-    self.nodes    = {}
-    self.nets     = {}
-    self.zones    = {}
-
-    if hasattr(src, 'read'):
-      # If it has a 'read' method, assume it's a file.
-      self.parse(src)
-    else:
-      # Otherwise assume it's a filename and try to open it.
-      self.parse(open(src))
-
-  def parse(self, src):
-    cur_zone = 0
-    cur_net = 0
-    cur_route = Default
-
-    lineno = 0
-    for line in src:
-      lineno += 1
-
-      # Skip blank lines...
-      if not line.strip():
-        continue
-
-      # ...and comments.
+  def parseFile(self, nlpath):
+    fd = open(nlpath)
+    ctx = AttrDict()
+    lc = 0
+    for line in fd:
+      lc += 1
       if line.startswith(';'):
         continue
-      
-      parts = line.strip().split(',')
-      if len(parts) < 7:
-        print >>sys.stderr, '%d: BOGUS:' % lineno, line.strip()
+      try:
+        n = Node(line.strip(), ctx)
+      except ShortLineError:
         continue
 
-      # Transform the seven required fields into a Python
-      # dictionary.
-      node = Node(zip([x[0] for x in REQUIRED_FIELDS], parts[:8]), parent=self)
-      for fieldName, transform in REQUIRED_FIELDS:
-        if transform is not None:
-          node[fieldName] = transform(node[fieldName])
+      self.nodes.append(n)
+      self.index['node']['%s' % n.address] = n
 
-      # Now extract the flags into the dictionary.
-      node.flags = {'private' : False}
-      for flag in parts[7:]:
-        data = True
-        if ':' in flag:
-          flag, data = flag.split(':',1)
+      try:
+        self.index['zone'][n.address.z].append(n)
+      except KeyError:
+        self.index['zone'][n.address.z] = [n]
 
-        node.flags[flag] = data
+      net = '%s:%s' % (n.address.z, n.address.n)
 
-      if node['keyword'] == 'zone':
-        cur_zone = node['node']
-        cur_route = Default
-        cur_net = 1
-      elif node['keyword'] == 'region':
-        cur_net = node['node']
-        cur_route = Default
-        node['node'] = 0
-      elif node['keyword'] == 'host':
-        cur_net = node['node']
-        cur_route = node
-        node['node'] = 0
-      elif node['keyword'] == 'hub':
-        cur_route = node
-      elif node['keyword'] == 'pvt':
-        node.flags['private'] = True
+      try:
+        self.index['net'][net].append(n)
+      except KeyError:
+        self.index['net'][net] = [n]
 
-      node['zone'] = cur_zone
-      node['net'] = cur_net
-      node['route'] = cur_route
+def main():
+  N = Nodelist(nlpath = sys.argv[1])
 
-      # Add to sequential list of nodes.
-      self.nodelist.append(node)
+  for addr in sys.argv[2:]:
+    print N.index['node'][addr]
 
-      # Add to node index.
-      self.nodes['%(zone)s:%(net)s/%(node)s' % node] = node
-
-  def node(self, k=None):
-    '''If k is None, return all nodes.  Otherwise, return information
-    on the requested node.'''
-
-    if k is None:
-      return self.nodelist
-    else:
-      return self.nodes[k]
-
-if __name__ == '__main__':
-  import pprint
-
-  nl = Nodelist(sys.argv[1])
-
-  if len(sys.argv) == 2:
-    for node in nl.node():
-      print '%15s %20s %s' \
-          % (node.address(), node['name'], ' '.join(node.flags.keys()))
-  else:
-    import pprint
-    x = nl.node(sys.argv[2])
-    print 'Route mail for %s to %s.' % (x.address(), x['route'].address())
-
+if __name__ == '__main__': main()
 

@@ -1,0 +1,61 @@
+#!/usr/bin/python
+
+import os, sys, optparse, re
+from pydonet.nodelist import Nodelist
+
+re_zeroes = re.compile(r'000-0+-0+-0+-0+')
+re_ipaddr = re.compile(r'\d+.\d+.\d+.\d+')
+re_fqdn = re.compile(r'([a-z0-9][a-z0-9-]*)?[a-z0-9](\.([a-z0-9][a-z0-9-]*)?[a-z0-9])+\.?', re.IGNORECASE)
+re_alexey = re.compile(r'[a-z0-9][a-z0-9\-]+[a-z0-9](\.[a-z0-9][a-z0-9\-]+[a-z0-9])*\.?', re.IGNORECASE)
+
+def ipForService(node, svc):
+  cdata = {}
+
+  if node.has_key(svc):
+    cdata['has_%s' % svc] = True
+    print 'has', svc, ':', node[svc]
+
+    # (1) Is there a service-specific IP address or port?
+    if node[svc] is not True:
+      if ':' in node[svc]:
+        host, port = node[svc].split(':')
+        cdata['host'] = host
+        cdata['port'] = port
+      else:
+        if node[svc].isdigit():
+          cdata['port'] = node[svc]
+        else:
+          cdata['host'] = node[svc]
+
+    if not cdata.has_key('host'):
+      # (2) Is there an INA: flag?
+      if node.has_key('INA') and node['INA'] is not True:
+        cdata['host'] = node['INA']
+
+      # (3) Is the phone number really an IP address?
+      if node.phone.startswith('000-') and not re_zeroes.match(node.phone):
+        cdata['host'] = node.phone.split('-', 1)[1].replace('-', '.')
+
+      # (4) Is field three (system name) really a hostname?  UGLY UGLY BAD
+      if re_fqdn.match(node.name):
+        cdata['host'] = node.name
+  
+  return cdata
+
+def main():
+  import pprint
+
+  nlpath = sys.argv[1]
+  svc = sys.argv[2]
+
+  N = Nodelist(nlpath)
+  for node in N.nodes:
+    print 'CHECKING:', node.address
+    cdata = ipForService(node, svc)
+    if cdata.has_key('has_%s' % svc) and not cdata.has_key('host'):
+      print 'OOPS:', node.address, node.entry
+
+if __name__ == '__main__': main()
+
+# vim: set ts=2 sw=2 expandtab syntax=python :
+

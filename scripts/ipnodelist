@@ -13,7 +13,6 @@ def ipForService(node, svc):
 
   if node.has_key(svc):
     cdata['has_%s' % svc] = True
-    print 'has', svc, ':', node[svc]
 
     # (1) Is there a service-specific IP address or port?
     if node[svc] is not True:
@@ -51,10 +50,11 @@ def main():
 
   N = Nodelist(nlpath)
   for node in N.nodes:
-    print 'CHECKING:', node.address
     cdata = ipForService(node, svc)
     if cdata.has_key('has_%s' % svc) and not cdata.has_key('host'):
       print 'OOPS:', node.address, node.entry
+    elif cdata.has_key('has_%s' % svc):
+      print '%-12s %s%s' % (node.address, cdata['host'], cdata.get('port') and ':%s' % cdata['port'] or '')
 
 if __name__ == '__main__': main()
 

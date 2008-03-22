@@ -31,13 +31,14 @@ def ipForService(node, svc):
       # (2) Is there an INA: flag?
       if node.has_key('INA') and node['INA'] is not True:
         cdata['host'] = node['INA']
-
-      # (3) Is the phone number really an IP address?
-      if node.phone.startswith('000-') and not re_zeroes.match(node.phone):
+      elif node.has_key('IP') and node['IP'] is not True:
+        # (3) Is there an IP: flag?
+        cdata['host'] = node['IP']
+      elif node.phone.startswith('000-') and not re_zeroes.match(node.phone):
+        # (3) Is the phone number really an IP address?
         cdata['host'] = node.phone.split('-', 1)[1].replace('-', '.')
-
-      # (4) Is field three (system name) really a hostname?  UGLY UGLY BAD
-      if re_fqdn.match(node.name):
+      elif re_fqdn.match(node.name):
+        # (4) Is field three (system name) really a hostname?  UGLY UGLY BAD
         cdata['host'] = node.name
   
   return cdata

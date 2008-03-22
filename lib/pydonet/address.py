@@ -1,8 +1,9 @@
 import re
+from pydonet.utils.attrdict import AttrDict
 
 re_address = re.compile('((?P<z>\d+):)?(?P<n>\d+)/(?P<f>\d+)(\.(?P<p>\d+))?(@(?P<d>\S+))?')
 
-class Address (object):
+class Address (AttrDict):
   '''A class for manipulating Fidonet addresses.  Examples::
     
     >>> from pydonet.address import Address
@@ -21,15 +22,14 @@ class Address (object):
   def __init__ (self, addr = None, z = None, n = None, f = None, p = None, d = None):
     if addr is not None:
       if isinstance(addr, Address):
-        for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
-          setattr(self, attr, getattr(addr, attr))
+          self.update(addr)
       else:
         mo = re_address.match(addr)
         if not mo:
           raise ValueError('\"%s\" is not a FTN address.' % addr)
 
         for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
-          setattr(self, attr, mo.group(attr))
+          self[attr] = mo.group(attr)
     else:
       self.z = z
       self.n = n

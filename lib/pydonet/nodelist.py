@@ -15,7 +15,9 @@ For example:
 '''
 
 import os, sys, re, fileinput
+import socket
 from pydonet.address import Address
+from pydonet.utils.attrdict import AttrDict
 
 # These are the seven standard fields, described in
 # FTS 5000.002 (http://www.ftsc.org/docs/fts-5000.002).
@@ -31,17 +33,66 @@ REQUIRED_FIELDS = (
     ('speed',     None),
     )
 
-DEFAULT = Address('0:0/0')
+re_zeroes = re.compile(r'000(-0+)+$')
+re_ipaddr = re.compile(r'\d+.\d+.\d+.\d+')
+re_fqdn = re.compile(r'([a-z0-9][a-z0-9-]*)?[a-z0-9](\.([a-z0-9][a-z0-9-]*)?[a-z0-9])+\.?', re.IGNORECASE)
 
-class AttrDict (dict):
-  def __getattr__ (self, k):
-    try:
-      return self[k]
-    except KeyError, detail:
-      raise AttributeError(detail)
+# Indicates that the host is a Host (routes for itself).
+DIRECT = Address('0:0/0')
 
-  def __setattr__ (self, k, v):
-    self[k] = v
+def ipForService(node, svc, checkDns = False):
+  '''Given a Node, use commonly accepted heuristics to determine
+  the ip address or hostname for a given Ixx service flag.  Returns
+  a tuple (flag, host, port), where:
+  
+  - flag is the corresponding Ixx flag if the host offers that service,
+    or None otherwise;
+
+  - host is the hostname or ip address
+
+  - port is the port if the node uses a nonstandard port for the service.
+  '''
+
+  flag = None
+  host = None
+  port = None
+
+  if node.has_key(svc):
+    flag = svc
+
+    # (1) Is there a service-specific IP address or port?
+    if node[svc] is not True:
+      if ':' in node[svc]:
+        host, port = node[svc].split(':')
+      else:
+        if node[svc].isdigit():
+          port = node[svc]
+        else:
+          host = node[svc]
+
+    if host is None:
+      # (2) Is there an INA: flag?
+      if node.get('INA', True) is not True:
+        host = node['INA']
+      elif node.get('IP', True) is not True:
+        # (3) Is there an IP: flag?
+        host = node['IP']
+      elif node.phone.startswith('000-') and not re_zeroes.match(node.phone):
+        # (4) Is the phone number really an IP address?
+        host = node.phone.split('-', 1)[1].replace('-', '.')
+      elif re_fqdn.match(node.name):
+        # (5) Is field three (system name) really a hostname?  UGLY UGLY BAD
+        host = node.name
+
+    if host is None and checkDns:
+      try:
+        maybe = 'f%(f)s.n%(n)s.z%(z)s.fidonet.net' % node.address
+        addr = socket.gethostbyname(maybe)
+        host = maybe
+      except socket.gaierror:
+        pass
+  
+  return (flag, host, port)
 
 class ShortLineError(Exception):
   pass
@@ -72,20 +123,20 @@ class Node (AttrDict):
     if self.keyword == 'zone':
       self.address = Address('%s:1/1' % self.node)
       ctx.route = self.address
-      self.route = DEFAULT
+      self.route = DIRECT
     elif self.keyword == 'region':
-      self.address = Address('%s:%s/1' % (ctx.address.z, self.node))
+      self.address = Address('%s:%s/0' % (ctx.address.z, self.node))
       ctx.route = self.address
-      self.route = DEFAULT
+      self.route = DIRECT
     elif self.keyword == 'host':
-      self.address = Address('%s:%s/1' % (ctx.address.z, self.node))
+      self.address = Address('%s:%s/0' % (ctx.address.z, self.node))
       ctx.route = self.address
-      self.route = DEFAULT
+      self.route = DIRECT
     elif self.keyword == 'hub':
       self.address = Address('%s:%s/%s'
           % (ctx.address.z, ctx.address.n, self.node))
       ctx.route = self.address
-      self.route = DEFAULT
+      self.route = DIRECT
     else:
       self.address = Address(addr = ctx.address)
       self.address.f = self.node

@@ -1,0 +1,22 @@
+#!/usr/bin/python
+
+import os, sys, optparse, re
+from pydonet import nodelist
+
+def main():
+  import pprint
+
+  nlpath = sys.argv[1]
+
+  N = nodelist.Nodelist(nlpath)
+  for node in N.nodes:
+    flag, host, port = nodelist.ipForService(node, 'IBN', checkDns = True)
+    if flag and not host:
+      print >>sys.stderr, 'Addr?', node.address, node.entry
+    elif flag:
+      print 'node %-12s %s%s -' % (node.address, host, port is not None and ':%s' % port or '')
+
+if __name__ == '__main__': main()
+
+# vim: set ts=2 sw=2 expandtab syntax=python :
+

@@ -32,8 +32,10 @@ class Address (AttrDict):
           self[attr] = mo.group(attr)
 
       for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
-        pass
-        # need to assign from functions parms here.
+        v = eval(attr)
+        if v is not None:
+          self[attr] = v
+
   def __str__ (self):
     addr = []
     if self.z is not None:
@@ -49,5 +51,7 @@ class Address (AttrDict):
     return ''.join(addr)
 
   def __repr__ (self):
-    return 'Address("%s")' % self
+    return str(self)
 
+  def __hash__ (self):
+    return hash(str(self))

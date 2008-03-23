@@ -18,6 +18,7 @@ import os, sys, re, fileinput
 import socket
 from pydonet.address import Address
 from pydonet.utils.attrdict import AttrDict
+from pydonet.utils.odict import OrderedDict
 
 # These are the seven standard fields, described in
 # FTS 5000.002 (http://www.ftsc.org/docs/fts-5000.002).
@@ -40,7 +41,7 @@ re_fqdn = re.compile(r'([a-z0-9][a-z0-9-]*)?[a-z0-9](\.([a-z0-9][a-z0-9-]*)?[a-z
 # Indicates that the node is a Host (routes for itself).
 DIRECT = Address('0:0/0')
 
-def ipForFlag(node, flag, val, checkDns = False):
+def ipForService(node, flag, val, checkDns = False):
   host = None
   port = None
 
@@ -56,11 +57,11 @@ def ipForFlag(node, flag, val, checkDns = False):
 
   if host is None:
     # (2) Is there an INA: flag?
-    if node.flag.get('INA'):
-      host = node.flag['INA'][0]
-    elif node.get('IP', True) is not True:
+    if node.getFlag('INA', True) is not True:
+      host = node.getFlag('INA')
+    elif node.getFlag('IP', True) is not True:
       # (3) Is there an IP: flag?
-      host = node['IP']
+      host = node.getFlag('IP')
     elif node.phone.startswith('000-') and not re_zeroes.match(node.phone):
       # (4) Is the phone number really an IP address?
       host = node.phone.split('-', 1)[1].replace('-', '.')
@@ -76,7 +77,7 @@ def ipForFlag(node, flag, val, checkDns = False):
     except socket.gaierror:
       pass
 
-  return (flag, host, port)
+  return (host, port)
 
 class NodeListError(Exception):
   def __init__(self, msg, path, line):
@@ -87,7 +88,7 @@ class NodeListError(Exception):
 class Node (AttrDict):
   def __init__ (self, entry, ctx):
     self.entry = entry
-    self.flags = {}
+    self.flags = OrderedDict()
     self.parseEntry(entry, ctx)
 
   def parseEntry(self, entry, ctx):
@@ -134,6 +135,15 @@ class Node (AttrDict):
       self.route = ctx.route
 
     ctx.address = Address(addr = self.address)
+
+  def getFlag(self, flag, default = None):
+    if self.flags.has_key(flag):
+      return self.flags[flag][0]
+    else:
+      return default
+
+  def getEveryFlag(self, flag, default = []):
+    return self.flags.get(flag, default)
 
 class Nodelist (object):
   def __init__ (self, nlpath = None):

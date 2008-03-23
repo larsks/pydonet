@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-import os, sys
+import os, sys, pprint, optparse
 import pydonet.nodelist as nodelist
-import pydonet.utils.timeoutsocket
+import pydonet.utils.timeoutsocket as timeoutsocket
+from pydonet.utils.odict import OrderedDict
 import socket
 
 SERVICEFLAGS = (
@@ -12,50 +13,70 @@ SERVICEFLAGS = (
   ( 'IFC', 60179 ),
 )
 
+def tryConnect(host, port):
+
+  res = None
+  s = socket.socket()
+  try:
+    s.connect((host, int(port)))
+    s.close()
+    res = 'OKAY'
+  except timeoutsocket.Timeout:
+    res = 'TIMEOUT'
+  except socket.error:
+    res = 'FAILED'
+
+  return res
+
 def main():
+  timeoutsocket.setDefaultSocketTimeout(10)
+
   N = nodelist.Nodelist(sys.argv[1])
-  D = {}
+  results = []
+  seen = {}
+  maxflaglen = 0
+
   for node in N.nodes:
-    if D.has_key(str(node.address)):
+    if seen.has_key(node.address):
+      print '+ Skipping second entry for %s.' % node.address
       continue
 
-    print 'Checking node %s (%s):' % (node.address, node.name)
-    svc = {}
-    results = {}
+    seen[node.address] = True
+
+    print '+ %(address)s (%(name)s)' % node
+
+    noderesult = OrderedDict()
     lastHost = None
 
-    # Figure out what to check...
+    # Iterate through list of flags.
     for flag, defport in SERVICEFLAGS:
-      offers, host, port = nodelist.ipForService(node, flag, checkDns=False)
-      if offers is not None:
-        svc[flag] = (host or lastHost, int(port or defport))
+      for val in node.flags.get(flag, []):
+        k = val is True and flag or '%s:%s' % (flag, val)
+        if len(k) > maxflaglen:
+          maxflaglen = len(k)
 
-      if host:
-        lastHost = host
+        print '  %s' % k,
+        host, port = nodelist.ipForService(node, flag, val, checkDns = True)
 
-    # ...and now check it.
-    for flag, cdata in svc.items():
-      print ' ', flag,
-      if not cdata[0]:
-        print 'INVALID'
-        results[flag] = 'INVALID'
-      else:
-        s = socket.socket()
-        try:
-          s.connect(cdata)
-          s.close()
-          print 'OKAY'
-          results[flag] = 'OKAY'
-        except socket.error:
-          print 'FAILED'
-          results[flag] = 'FAILED'
-        except pydonet.utils.timeoutsocket.Timeout:
-          print 'TIMEOUT'
-          results[flag] = 'TIMEOUT'
-    D[str(node.address)] = {'offers': svc, 'results': results}
+        if host is None:
+          host = lastHost
 
-  import pprint
-  pprint.pprint(D)
+        if host is None:
+          res  = 'INVALID'
+        else:
+          print '%s:%s' % (host,port),
+          res = tryConnect(host, port or defport)
+          lastHost = host
+
+        print res
+        noderesult[k] = res
+
+    results.append((node, noderesult))
+
+  for node, noderesult in results:
+    print '%(address)-12s %(name)s' % node
+    for flag, result in noderesult.items():
+      print ' ' * 12, '%%-%ds %%s' % maxflaglen % (flag, result)
 
 if __name__ == '__main__': main()
 

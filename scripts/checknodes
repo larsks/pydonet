@@ -13,52 +13,94 @@ SERVICEFLAGS = (
   ( 'IFC', 60179 ),
 )
 
+def tryLookup(host):
+
+  res = 'OKAY'
+  
+  try:
+    socket.gethostbyname(host)
+  except socket.gaierror:
+    res = 'FAILED:LOOKUP'
+
+  return res
+
 def tryConnect(host, port):
 
-  res = None
+  res = 'OKAY'
+
   s = socket.socket()
   try:
     s.connect((host, int(port)))
     s.close()
-    res = 'OKAY'
   except timeoutsocket.Timeout:
-    res = 'TIMEOUT'
+    res = 'FAILED:TIMEOUT'
+  except socket.gaierror:
+    res = 'FAILED:LOOKUP'
   except socket.error:
-    res = 'FAILED'
+    res = 'FAILED:REFUSED'
 
   return res
 
 def formatResults(results):
-  maxaddrlen = 0
-  maxhostlen = 0
-  maxflaglen = 0
+  maxsysnamelen = 15
+  maxaddrlen = 7
+  maxhostlen = 8
+  maxflaglen = 3
+  maxreslen = 4
 
   # prescan for field widths
   for node, noderesult in results:
-    addr = str(node.address)
-    if len(addr) > maxaddrlen:
-      maxaddrlen = len(addr)
+    try:
+      addr = str(node.address)
 
-    for flag, result in noderesult.items():
-      if len(flag) > maxflaglen:
-        maxflaglen = len(flag)
+      if len(addr) > maxaddrlen:
+        maxaddrlen = len(addr)
 
-      res, host, port = result
-      if len(host) > maxhostlen:
-        maxhostlen = len(host)
+      for flag, result in noderesult.items():
+        if len(flag) > maxflaglen:
+          maxflaglen = len(flag)
+
+        res, host, port = result
+        if len(host) > maxhostlen:
+          maxhostlen = len(host)
+        if len(res) > maxreslen:
+          maxreslen = len(res)
+    except TypeError, detail:
+      pass
+
+  if opts.output is not None:
+    sys.stdout = open(opts.output, 'w')
+
+#  print HEADER % {'maxaddrlen': maxaddrlen,
+#      'maxhostlen': maxhostlen,
+#      'maxflaglen': maxflaglen}
+
+  print '=' * maxaddrlen, '=' * maxhostlen, '=' * maxflaglen, '=' * maxreslen
 
   for node, noderesult in results:
     print '%%(address)-%ds' % maxaddrlen % node, '%(name)s' % node
     for flag, result in noderesult.items():
+      status = result[0]
+
+      if status == 'INVALID':
+        host = 'INVALID'
+      else:
+        host = result[1]
       print ' ' * maxaddrlen, '%%-%ds %%-%ds %%s' % (maxhostlen, maxflaglen) \
-          % (result[1], flag, result[0])
+          % (host, flag, status)
     print
+
+  print '=' * maxaddrlen, '=' * maxhostlen, '=' * maxflaglen, '=' * maxreslen
 
 def checkNodes(nlist):
   results = []
   seen = {}
 
   for node in nlist.nodes:
+    if opts.only_zone and node.address.z not in opts.only_zone:
+      print '+ Skip', node.address
+      continue
+
     if seen.has_key(node.address):
       print '+ Skipping second entry for %s.' % node.address
       continue
@@ -76,7 +118,7 @@ def checkNodes(nlist):
         k = val is True and flag or '%s:%s' % (flag, val)
 
         print '  %s' % k,
-        host, port = nodelist.ipForService(node, flag, val, checkDns = True)
+        host, port = nodelist.ipForService(node, flag, val, checkDns = opts.check_dns)
 
         if host is None:
           host = lastHost
@@ -85,7 +127,11 @@ def checkNodes(nlist):
           res  = 'INVALID'
         else:
           print '%s%s' % (host, port is not None and ':%s' % port or ''),
-          res = tryConnect(host, port or defport)
+          if opts.connect:
+            res = tryConnect(host, port or defport)
+          else:
+            res = tryLookup(host)
+
           lastHost = host
 
         print res
@@ -98,10 +144,12 @@ def checkNodes(nlist):
 
 def parse_args():
   parser = optparse.OptionParser()
-  parser.add_option('-i', '--interval', default='1')
-  parser.add_option('-o', '--output')
-  parser.add_option('-e', '--errors-to')
-  parser.add_option('-D', '--check-dns', action='store_true')
+  parser.add_option('-i', '--interval', default='1', help='Wait this many seconds between nodes.')
+  parser.add_option('-o', '--output', help='Where to send formatted output.')
+  parser.add_option('-e', '--errors-to', help='Where to send error messages.')
+  parser.add_option('-D', '--check-dns', action='store_true', help='Perform .fidonet.net resolution.', default=False)
+  parser.add_option('-n', '--noconnect', action='store_false', dest='connect', default=True)
+  parser.add_option('-z', '--only-zone', action='append', default=[])
   
   return parser.parse_args()
 

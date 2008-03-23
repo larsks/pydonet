@@ -1,0 +1,61 @@
+#!/usr/bin/python
+
+import os, sys
+import pydonet.nodelist as nodelist
+import pydonet.utils.timeoutsocket
+import socket
+
+SERVICEFLAGS = (
+  ( 'IBN', 24554 ),
+  ( 'ITN', 23 ),
+  ( 'IFT', 21 ),
+  ( 'IFC', 60179 ),
+)
+
+def main():
+  N = nodelist.Nodelist(sys.argv[1])
+  D = {}
+  for node in N.nodes:
+    if D.has_key(str(node.address)):
+      continue
+
+    print 'Checking node %s (%s):' % (node.address, node.name)
+    svc = {}
+    results = {}
+    lastHost = None
+
+    # Figure out what to check...
+    for flag, defport in SERVICEFLAGS:
+      offers, host, port = nodelist.ipForService(node, flag, checkDns=False)
+      if offers is not None:
+        svc[flag] = (host or lastHost, int(port or defport))
+
+      if host:
+        lastHost = host
+
+    # ...and now check it.
+    for flag, cdata in svc.items():
+      print ' ', flag,
+      if not cdata[0]:
+        print 'INVALID'
+        results[flag] = 'INVALID'
+      else:
+        s = socket.socket()
+        try:
+          s.connect(cdata)
+          s.close()
+          print 'OKAY'
+          results[flag] = 'OKAY'
+        except socket.error:
+          print 'FAILED'
+          results[flag] = 'FAILED'
+        except pydonet.utils.timeoutsocket.Timeout:
+          print 'TIMEOUT'
+          results[flag] = 'TIMEOUT'
+    D[str(node.address)] = {'offers': svc, 'results': results}
+
+  import pprint
+  pprint.pprint(D)
+
+if __name__ == '__main__': main()
+

@@ -1,0 +1,18 @@
+#!/usr/bin/python
+
+import os, sys, optparse, pprint
+from pydonet import nodelist
+
+def main():
+  import pprint
+
+  nlpath = sys.argv[1]
+
+  N = nodelist.Nodelist(nlpath)
+  for node in N.nodes:
+    pprint.pprint(node)
+
+if __name__ == '__main__': main()
+
+# vim: set ts=2 sw=2 expandtab syntax=python :
+

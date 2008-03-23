@@ -30,13 +30,10 @@ class Address (AttrDict):
 
         for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
           self[attr] = mo.group(attr)
-    else:
-      self.z = z
-      self.n = n
-      self.f = f
-      self.p = p
-      self.d = d
 
+      for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
+        pass
+        # need to assign from functions parms here.
   def __str__ (self):
     addr = []
     if self.z is not None:

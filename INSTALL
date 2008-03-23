@@ -1,0 +1,11 @@
+Pydonet
+=======
+
+Author: Lars Kellogg-Stedman (1:322/761)
+        lars@oddbit.com
+
+Installation, in brief:
+
+  python setup.py build
+  python setup.py install
+

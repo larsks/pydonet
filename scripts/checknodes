@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, sys, pprint, optparse
+import os, sys, pprint, optparse, time
 import pydonet.nodelist as nodelist
 import pydonet.utils.timeoutsocket as timeoutsocket
 from pydonet.utils.odict import OrderedDict
@@ -28,15 +28,37 @@ def tryConnect(host, port):
 
   return res
 
-def main():
-  timeoutsocket.setDefaultSocketTimeout(10)
-
-  N = nodelist.Nodelist(sys.argv[1])
-  results = []
-  seen = {}
+def formatResults(results):
+  maxaddrlen = 0
+  maxhostlen = 0
   maxflaglen = 0
 
-  for node in N.nodes:
+  # prescan for field widths
+  for node, noderesult in results:
+    addr = str(node.address)
+    if len(addr) > maxaddrlen:
+      maxaddrlen = len(addr)
+
+    for flag, result in noderesult.items():
+      if len(flag) > maxflaglen:
+        maxflaglen = len(flag)
+
+      res, host, port = result
+      if len(host) > maxhostlen:
+        maxhostlen = len(host)
+
+  for node, noderesult in results:
+    print '%%(address)-%ds' % maxaddrlen % node, '%(name)s' % node
+    for flag, result in noderesult.items():
+      print ' ' * maxaddrlen, '%%-%ds %%-%ds %%s' % (maxhostlen, maxflaglen) \
+          % (result[1], flag, result[0])
+    print
+
+def checkNodes(nlist):
+  results = []
+  seen = {}
+
+  for node in nlist.nodes:
     if seen.has_key(node.address):
       print '+ Skipping second entry for %s.' % node.address
       continue
@@ -52,8 +74,6 @@ def main():
     for flag, defport in SERVICEFLAGS:
       for val in node.flags.get(flag, []):
         k = val is True and flag or '%s:%s' % (flag, val)
-        if len(k) > maxflaglen:
-          maxflaglen = len(k)
 
         print '  %s' % k,
         host, port = nodelist.ipForService(node, flag, val, checkDns = True)
@@ -64,19 +84,37 @@ def main():
         if host is None:
           res  = 'INVALID'
         else:
-          print '%s:%s' % (host,port),
+          print '%s%s' % (host, port is not None and ':%s' % port or ''),
           res = tryConnect(host, port or defport)
           lastHost = host
 
         print res
-        noderesult[k] = res
+        noderesult[k] = (res, host, port)
 
     results.append((node, noderesult))
+    time.sleep(int(opts.interval))
 
-  for node, noderesult in results:
-    print '%(address)-12s %(name)s' % node
-    for flag, result in noderesult.items():
-      print ' ' * 12, '%%-%ds %%s' % maxflaglen % (flag, result)
+  return results
+
+def parse_args():
+  parser = optparse.OptionParser()
+  parser.add_option('-i', '--interval', default='1')
+  parser.add_option('-o', '--output')
+  parser.add_option('-e', '--errors-to')
+  parser.add_option('-D', '--check-dns', action='store_true')
+  
+  return parser.parse_args()
+
+def main():
+  global opts
+
+  timeoutsocket.setDefaultSocketTimeout(10)
+
+  opts, args = parse_args()
+
+  nlist = nodelist.Nodelist(args[0])
+  results = checkNodes(nlist)
+  formatResults(results)
 
 if __name__ == '__main__': main()
 

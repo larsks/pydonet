@@ -20,6 +20,9 @@ class Address (AttrDict):
     '''
 
   def __init__ (self, addr = None, z = None, n = None, f = None, p = None, d = None):
+    for attr in [ 'z', 'n', 'f', 'p', 'd' ]:
+      self[attr] = None
+
     if addr is not None:
       if isinstance(addr, Address):
           self.update(addr)

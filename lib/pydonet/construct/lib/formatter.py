@@ -33,22 +33,3 @@ class ReprFormatter(object):
         pass
     
         
-        obj, nesting, indentation = "    "):
-    items = obj.__introspect__()
-    return 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

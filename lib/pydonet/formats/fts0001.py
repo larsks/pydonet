@@ -78,20 +78,89 @@ DiskMessageHeader = Struct('message',
   ULInt16('nextReply'),
 )
 
-def UnboundCString (name, terminators = "\x00", encoding = None, 
+class RepeatUntilSafe(Subconstruct):
+    """
+    An array that repeat until the predicate indicates it to stop. Note that
+    the last element (which caused the repeat to exit) is included in the 
+    return value.
+
+    Parameters:
+    * predicate - a predicate function that takes (obj, context, stream) and returns
+      True if the stop-condition is met, or False to continue.
+    * subcon - the subcon to repeat.
+    
+    Example:
+    # will read chars until \x00 (inclusive)
+    RepeatUntil(lambda obj, ctx: obj == "\x00",
+        Field("chars", 1)
+    )
+    """
+    __slots__ = ["predicate"]
+    def __init__(self, predicate, subcon):
+        Subconstruct.__init__(self, subcon)
+        self.predicate = predicate
+        self._clear_flag(self.FLAG_COPY_CONTEXT)
+        self._set_flag(self.FLAG_DYNAMIC)
+    def _parse(self, stream, context):
+        obj = []
+        try:
+            if self.subcon.conflags & self.FLAG_COPY_CONTEXT:
+                while True:
+                    subobj = self.subcon._parse(stream, context.__copy__())
+                    obj.append(subobj)
+                    if self.predicate(subobj, context):
+                        break
+            else:
+                while True:
+                    subobj = self.subcon._parse(stream, context)
+                    obj.append(subobj)
+                    if self.predicate(subobj, context):
+                        break
+        except FieldError:
+            pass
+        except ConstructError, ex:
+            raise ArrayError("missing terminator", ex)
+        return obj
+    def _build(self, obj, stream, context):
+        terminated = False
+        if self.subcon.conflags & self.FLAG_COPY_CONTEXT:
+            for subobj in obj:
+                self.subcon._build(subobj, stream, context.__copy__())
+                if self.predicate(subobj, context): 
+                    terminated = True
+                    break
+        else:
+            for subobj in obj:
+                self.subcon._build(subobj, stream, context.__copy__())
+                if self.predicate(subobj, context):
+                    terminated = True
+                    break
+        if not terminated:
+            raise ArrayError("missing terminator")
+    def _sizeof(self, context):
+        raise SizeofError("can't calculate size")
+
+
+def eofSafeCString (name, terminators = "\x00", encoding = None, 
     char_field = Field(None, 1)):
   '''This is like a CString, except that it won't barf if the parser
     finds an EOF before finding a terminator.'''
 
   return Rename(name,
       CStringAdapter(
-        GreedyRange(
-          char_field,
+        RepeatUntilSafe(lambda obj, ctx: obj in terminators, 
+            char_field,
         ),
         terminators = terminators,
         encoding = encoding,
       )
   )
 
-MessageBody = UnboundCString('body')
+MessageBody = eofSafeCString('body')
+
+def Message(header, body):
+  return Struct(
+    header,
+    body
+  )
 

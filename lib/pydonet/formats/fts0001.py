@@ -78,5 +78,20 @@ DiskMessageHeader = Struct('message',
   ULInt16('nextReply'),
 )
 
-MessageBody = CString('body')
+def UnboundCString (name, terminators = "\x00", encoding = None, 
+    char_field = Field(None, 1)):
+  '''This is like a CString, except that it won't barf if the parser
+    finds an EOF before finding a terminator.'''
+
+  return Rename(name,
+      CStringAdapter(
+        GreedyRange(
+          char_field,
+        ),
+        terminators = terminators,
+        encoding = encoding,
+      )
+  )
+
+MessageBody = UnboundCString('body')
 

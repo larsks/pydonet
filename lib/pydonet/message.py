@@ -181,6 +181,8 @@ def main(verbose = False):
     print
     if (verbose):
       print M.header
+      print
+      print M.body
 
 if __name__ == '__main__': main()
 

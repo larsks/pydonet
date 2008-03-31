@@ -1,7 +1,9 @@
 import os, sys, tempfile, zipfile
+import optparse
+
 from pydonet.packet import Packet
 from pydonet.message import Message
-import optparse
+from pydonet.area import Area
 
 def parse_args():
   parser = optparse.OptionParser()
@@ -67,6 +69,14 @@ def runfilter(filter, packet, msg):
     msg.klines['X-ORIGINAL-AREA:'] = msg.area
     msg.area = area
 
+  def export(dir):
+    '''Export message to an FTS-0001 style message area.'''
+    
+    a = Area(dir)
+    fd = a.nextMessage()
+    print >>fd, msg.serialize()
+    fd.close()
+
   try:
     fd = open(filter)
     exec fd in {
@@ -77,6 +87,7 @@ def runfilter(filter, packet, msg):
         'keep': keep,
         'stop': stop,
         'show': show,
+        'export': export,
         }
   except StopMessageProcessing:
     pass

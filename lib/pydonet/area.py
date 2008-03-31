@@ -1,4 +1,4 @@
-import os
+import os, errno
 
 class Area (object):
 
@@ -11,7 +11,8 @@ class Area (object):
     self.lastMessage = 0
 
   def nextMessage(self):
-    '''Returns an open file descriptor...'''
+    '''Returns a file object opened for writing to the next
+    available message.'''
 
     msgnum = self.lastMessage
     fd = None
@@ -25,8 +26,11 @@ class Area (object):
       try:
         fd = os.open(path, os.O_CREAT|os.O_EXCL|os.O_WRONLY)
         break
-      except Exception, detail:
-        print 'OOPS:', detail
+      except OSError, detail:
+        if detail.errno == errno.EEXIST:
+          pass
+        else:
+          raise(detail)
 
     self.lastMessage = msgnum
     return os.fdopen(fd, 'w')

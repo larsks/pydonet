@@ -23,7 +23,7 @@ def main():
     print '%%(directoryPath)-%ds %%(areaName)-%ds' \
     % (maxPathLen, maxNameLen) % area,
 
-    print ' '.join(x.address for x in area.forwardTo)
+    print ' '.join(x.address for x in area.forwardTo if x.addressLen > 0)
 
 if __name__ == '__main__': main()
 

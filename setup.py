@@ -26,6 +26,8 @@ setup(name = "pydonet",
     'scripts/ftnunpack',
     'scripts/ftnchecknodes',
     'scripts/ftntextnodes',
+    'scripts/db-showareas',
+    'scripts/db-mkareasbbs',
   ]
 )
 

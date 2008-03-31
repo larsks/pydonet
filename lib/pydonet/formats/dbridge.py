@@ -54,9 +54,9 @@ ADFRecord = Struct('ADFRecord',
   Char('groupAccess'),
   Char('groupSort'),
   Enum(Char('storage'),
-    FIDONET = 'F',
-    QUICKBBS = 'Q',
-    PASSTHRU = 'N',
+    FIDONET   = 'F',
+    QUICKBBS  = 'Q',
+    PASSTHRU  = 'N',
     _default_ = Pass,
   ),
   Char('processWeb'),
@@ -67,8 +67,8 @@ ADFRecord = Struct('ADFRecord',
   modifiedPascalString('directoryPath', 48),
   modifiedPascalString('database', 8),
   Enum(Char('kind'),
-    LOCAL = 'L',
-    ECHOMAIL = 'E',
+    LOCAL     = 'L',
+    ECHOMAIL  = 'E',
     _default_ = Pass,
   ),
   Integer('quickArea'),
@@ -76,10 +76,10 @@ ADFRecord = Struct('ADFRecord',
   Boolean('stripSeenbys'),
   modifiedPascalString('originLine', 56),
   Enum(Char('defaultPriority'),
-    NORMAL = 'N',
-    CRASH = 'C',
+    NORMAL    = 'N',
+    CRASH     = 'C',
     IMMEDIATE = 'I',
-    HOLD = 'H',
+    HOLD      = 'H',
     _default_ = Pass,
   ),
   EmailAddress('originAddress'),
@@ -91,9 +91,10 @@ ADFRecord = Struct('ADFRecord',
   Integer('received'),
   Integer('dupes'),
   Boolean('updateLast'),
-  Array(19, modifiedPascalString('forwardTo', 76))
+  Array(19, Struct('forwardTo', modifiedPascalString('address', 76)))
 )
 
+# An ADF file may have zero or more ADFRecords.
 ADF = OptionalGreedyRepeater(ADFRecord)
 
 if __name__ == '__main__':
@@ -108,5 +109,4 @@ if __name__ == '__main__':
     print area
     print
     n += 1
-
 

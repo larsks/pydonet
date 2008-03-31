@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+import os, sys
+from pydonet.formats.dbridge import ADF
+
+def main():
+  fd = open(sys.argv[1])
+  areas = ADF.parse_stream(fd)
+  fd.close()
+
+  maxPathLen = 0
+  maxNameLen = 0
+  for area in areas:
+    if len(area.directoryPath.strip()) > maxPathLen:
+      maxPathLen = len(area.directoryPath.strip())
+
+    if len(area.areaName.strip()) > maxNameLen:
+      maxNameLen = len(area.areaName.strip())
+
+  for area in areas:
+    if not area.allocated: continue
+
+    print '%%(directoryPath)-%ds %%(areaName)-%ds' \
+    % (maxPathLen, maxNameLen) % area,
+
+    print ' '.join(x.address for x in area.forwardTo)
+
+if __name__ == '__main__': main()
+

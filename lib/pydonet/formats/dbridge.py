@@ -22,10 +22,10 @@ DiskMessageHeader = Struct('message',
 )
 
 def modifiedPascalString(name, len, padchar = '\x00'):
-  return Struct(name,
-      ULInt8('length'),
-      String('val', len, padchar = padchar),
-  )
+  return Embed(Struct(name,
+      ULInt8('%sLen' % name),
+      String(name, len, padchar = padchar),
+  ))
 
 def Integer(name):
   return ULInt16(name)
@@ -36,7 +36,7 @@ def Boolean(name):
 def Char(name):
   return String(name, 1)
 
-def EMAIL_address (name):
+def EmailAddress (name):
   return Struct(name,
     Integer('zone'),
     Integer('net'),
@@ -45,7 +45,7 @@ def EMAIL_address (name):
     modifiedPascalString('domain', 12),
   )
 
-area_information_rec = Struct('area_information_rec',
+ADFRecord = Struct('ADFRecord',
   Boolean('allocated'),
   Char('alertFlag'),
   modifiedPascalString('areaTag', 16),
@@ -53,7 +53,12 @@ area_information_rec = Struct('area_information_rec',
   modifiedPascalString('areaDesc', 40),
   Char('groupAccess'),
   Char('groupSort'),
-  Char('storage'),
+  Enum(Char('storage'),
+    FIDONET = 'F',
+    QUICKBBS = 'Q',
+    PASSTHRU = 'N',
+    _default_ = Pass,
+  ),
   Char('processWeb'),
   Char('webASCII'),
   Integer('rescanLimit'),
@@ -61,13 +66,23 @@ area_information_rec = Struct('area_information_rec',
   Boolean('fpnpForced'),
   modifiedPascalString('directoryPath', 48),
   modifiedPascalString('database', 8),
-  Char('kind'),
+  Enum(Char('kind'),
+    LOCAL = 'L',
+    ECHOMAIL = 'E',
+    _default_ = Pass,
+  ),
   Integer('quickArea'),
   Boolean('defaultPrivate'),
   Boolean('stripSeenbys'),
   modifiedPascalString('originLine', 56),
-  Char('defaultPriority'),
-  EMAIL_address('originAddress'),
+  Enum(Char('defaultPriority'),
+    NORMAL = 'N',
+    CRASH = 'C',
+    IMMEDIATE = 'I',
+    HOLD = 'H',
+    _default_ = Pass,
+  ),
+  EmailAddress('originAddress'),
   Integer('purge'),
   Integer('preserve'),
   Integer('security'),
@@ -79,12 +94,12 @@ area_information_rec = Struct('area_information_rec',
   Array(19, modifiedPascalString('forwardTo', 76))
 )
 
-ADF = OptionalGreedyRepeater(area_information_rec)
+ADF = OptionalGreedyRepeater(ADFRecord)
 
 if __name__ == '__main__':
   import sys
-  print 'sizeof(email address) = ', EMAIL_address('tmp').sizeof()
-  print 'sizeof(area_information_rec) = ', area_information_rec.sizeof()
+  print 'sizeof(EmailAddress) = ', EmailAddress('tmp').sizeof()
+  print 'sizeof(ADFRecord) = ', ADFRecord.sizeof()
 
   a = ADF.parse_stream(open(sys.argv[1]))
   n = 0
